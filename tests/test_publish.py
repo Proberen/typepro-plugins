@@ -113,6 +113,10 @@ class PublisherTests(unittest.TestCase):
         current = {**self.empty, "plugins": [{"id": "new.example", "apiVersion": 2}]}
         (self.root / "catalog-v2.json").write_text(json.dumps(current), encoding="utf-8")
         self.assertEqual(publisher.read_previous(self.root), current)
+        newest = {**self.empty, "plugins": [{"id": "new.example", "apiVersion": 3}]}
+        (self.root / "catalog-v3.json").write_text(json.dumps(newest), encoding="utf-8")
+        self.assertEqual(publisher.read_previous(self.root), newest)
+        (self.root / "catalog-v3.json").unlink()
         (self.root / "catalog-v2.json").write_text("broken", encoding="utf-8")
         with self.assertRaises(ValueError):
             publisher.read_previous(self.root)
@@ -134,7 +138,7 @@ class PublisherTests(unittest.TestCase):
         self.assertEqual(json.loads((self.root / "catalog.json").read_text())["plugins"], entries[:1])
         self.assertEqual(json.loads((self.root / "catalog-v2.json").read_text())["plugins"], entries)
         self.assertEqual(sum(call.args[:2] == ("git", "commit") for call in run.call_args_list), 1)
-        run.assert_any_call("git", "add", "catalog.json", "catalog-v2.json")
+        run.assert_any_call("git", "add", "catalog.json", "catalog-v2.json", "catalog-v3.json")
         run.assert_any_call("git", "push", "origin", "HEAD:main")
 
     def test_failed_package_publication_leaves_catalog_untouched(self):
@@ -156,6 +160,29 @@ class PublisherTests(unittest.TestCase):
             run.assert_not_called()
         self.assertEqual((self.root / "catalog.json").read_bytes(), before)
         self.assertEqual((self.root / "catalog-v2.json").read_bytes(), before)
+
+    def test_api3_resource_bytes_and_origin_validation(self):
+        directory = self.plugin(apiVersion=3, permissions=["ui", "network", "secrets"], networkOrigins=["https://api.example.com"])
+        (directory / "files").mkdir()
+        (directory / "files" / "ui.js").write_text("document.body.textContent='ready';", encoding="utf-8")
+        (directory / "files" / "ui.css").write_text("body{color:var(--tp-text)}", encoding="utf-8")
+        entry, _, raw = publisher.package_plugin(directory)
+        self.assertEqual(entry["networkOrigins"], ["https://api.example.com"])
+        with zipfile.ZipFile(BytesIO(raw)) as archive:
+            self.assertEqual(archive.read("files/ui.js"), b"document.body.textContent='ready';")
+        for origin in ["http://api.example.com", "https://api.example.com/path", "https://user@api.example.com", "https://*.example.com"]:
+            with self.subTest(origin=origin), self.assertRaises(ValueError):
+                publisher.package_plugin(self.plugin(apiVersion=3, permissions=["network"], networkOrigins=[origin]))
+
+    def test_v3_catalog_preserves_last_compatible_legacy_release(self):
+        old = {"id": "notes.assistant", "version": "1.0.0", "apiVersion": 2}
+        new = {"id": "notes.assistant", "version": "1.1.0", "apiVersion": 3}
+        previous = {"catalog-v2.json": {"plugins": [old]}}
+        views = publisher.catalogs([new], "2026-10-22T00:00:00Z", previous)
+        self.assertEqual(views["catalog-v2.json"]["plugins"], [old])
+        self.assertEqual(views["catalog-v3.json"]["plugins"], [new])
+        self.assertEqual(views["catalog.json"]["plugins"], [])
+        self.assertEqual(publisher.catalogs([], "2026-10-22T00:00:00Z", previous)["catalog-v2.json"]["plugins"], [])
 
     def test_existing_release_cannot_replace_changed_bytes(self):
         directory = self.plugin()
