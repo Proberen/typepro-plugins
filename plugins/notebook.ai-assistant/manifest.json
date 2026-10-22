@@ -1,7 +1,7 @@
 {
   "id": "notebook.ai-assistant",
   "name": "AI 助手",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "apiVersion": 3,
   "description": "连接 DeepSeek 或兼容接口，围绕笔记进行会话，支持 Skill、来源引用和写入确认。会话与配置可同步，Key 仅保存在当前设备。基于通用 Plugin API 3，业务和界面随插件更新。",
   "permissions": [
