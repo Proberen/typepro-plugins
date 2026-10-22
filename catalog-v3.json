@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-22T09:59:40Z",
+  "updatedAt": "2026-10-22T10:15:38Z",
   "plugins": [
     {
       "id": "notebook.ai-assistant",
       "name": "AI 助手",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "apiVersion": 3,
       "permissions": [
         "commands",
@@ -21,8 +21,8 @@
       "networkOrigins": [
         "https://api.deepseek.com"
       ],
-      "downloadUrl": "https://github.com/Proberen/typepro-plugins/releases/download/plugin-df8c68c6906a762a3254f69102f1bae043238d2a99dc8cd37c6989ad074539ad/notebook.ai-assistant.zip",
-      "sha256": "9dbc4c7cad61e134fc16606c06f34d255c96cb9ae9781d04a3499de5485d5313",
+      "downloadUrl": "https://github.com/Proberen/typepro-plugins/releases/download/plugin-c66f8016bd260949cee0ea04ef9ea5be971dca31714b9a3b8a28cf3c225f1fd2/notebook.ai-assistant.zip",
+      "sha256": "f9c3ffc4e2614ee17b585eb4aebc9f0bdeb164b4d4fdbfa720466bc0b7b89599",
       "size": 300248
     },
     {
