@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-22T10:15:38Z",
+  "updatedAt": "2026-10-22T11:57:20Z",
   "plugins": [
     {
       "id": "notebook.ai-assistant",
       "name": "AI 助手",
-      "version": "1.1.1",
+      "version": "1.2.0",
       "apiVersion": 3,
       "permissions": [
         "commands",
@@ -17,13 +17,13 @@
         "notes.read",
         "notes.write"
       ],
-      "description": "连接 DeepSeek 或兼容接口，围绕笔记进行会话，支持 Skill、来源引用和写入确认。会话与配置可同步，Key 仅保存在当前设备。基于通用 Plugin API 3，业务和界面随插件更新。",
+      "description": "连接 DeepSeek 或兼容接口，围绕笔记进行会话，支持 Skill、来源引用和写入确认。新版 App 使用笔记侧栏，旧版回退独立页面。会话与配置可同步，Key 仅保存在当前设备。",
       "networkOrigins": [
         "https://api.deepseek.com"
       ],
-      "downloadUrl": "https://github.com/Proberen/typepro-plugins/releases/download/plugin-c66f8016bd260949cee0ea04ef9ea5be971dca31714b9a3b8a28cf3c225f1fd2/notebook.ai-assistant.zip",
-      "sha256": "f9c3ffc4e2614ee17b585eb4aebc9f0bdeb164b4d4fdbfa720466bc0b7b89599",
-      "size": 300248
+      "downloadUrl": "https://github.com/Proberen/typepro-plugins/releases/download/plugin-4f20c00880e6ca033bbf2cecc1765eda8a13b31ac1bf9ea400082880c65e8169/notebook.ai-assistant.zip",
+      "sha256": "9e005bcc64d096df3f575631b742de6df37a6013a0ad4e1759fc966ecbfc145f",
+      "size": 297764
     },
     {
       "id": "notebook.daily-checkin",
