@@ -2,3 +2,9 @@
 __pycache__/
 .DS_Store
 
+
+node_modules/
+plugins/notebook.ai-assistant/main.js
+plugins/notebook.daily-checkin/main.js
+plugins/*/files/ui.js
+plugins/*/files/ui.css
