@@ -1,0 +1,4 @@
+.publish/
+__pycache__/
+.DS_Store
+
