@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-10-22T09:59:40Z",
+  "plugins": [
+    {
+      "id": "notebook.ai-assistant",
+      "name": "AI 助手",
+      "version": "1.1.0",
+      "apiVersion": 3,
+      "permissions": [
+        "commands",
+        "ui",
+        "storage",
+        "network",
+        "secrets",
+        "files.pick",
+        "notes.read",
+        "notes.write"
+      ],
+      "description": "连接 DeepSeek 或兼容接口，围绕笔记进行会话，支持 Skill、来源引用和写入确认。会话与配置可同步，Key 仅保存在当前设备。基于通用 Plugin API 3，业务和界面随插件更新。",
+      "networkOrigins": [
+        "https://api.deepseek.com"
+      ],
+      "downloadUrl": "https://github.com/Proberen/typepro-plugins/releases/download/plugin-df8c68c6906a762a3254f69102f1bae043238d2a99dc8cd37c6989ad074539ad/notebook.ai-assistant.zip",
+      "sha256": "9dbc4c7cad61e134fc16606c06f34d255c96cb9ae9781d04a3499de5485d5313",
+      "size": 300248
+    },
+    {
+      "id": "notebook.daily-checkin",
+      "name": "每日打卡",
+      "version": "1.1.0",
+      "apiVersion": 3,
+      "permissions": [
+        "ui",
+        "storage",
+        "notes.read"
+      ],
+      "description": "自动记录人工编辑的新增与删除字数，在首页以贡献热力图展示，并通过私有笔记仓库同步。基于通用 Plugin API 3，业务和界面随插件更新。",
+      "downloadUrl": "https://github.com/Proberen/typepro-plugins/releases/download/plugin-9e2700b0d482099a0a4bf74477db12aa1a33f893790d3cff242e9967bf0185aa/notebook.daily-checkin.zip",
+      "sha256": "644ca726105fb7fa779175c0a5ab0fec305a00afc95f345a7dc59ae5aaf186e0",
+      "size": 237939
+    },
+    {
+      "id": "notebook.date-and-count",
+      "name": "日期与字数",
+      "version": "1.0.0",
+      "apiVersion": 1,
+      "permissions": [
+        "commands",
+        "editor.insert",
+        "notes.read",
+        "panels"
+      ],
+      "description": "插入日期，查看当前文档字数。",
+      "downloadUrl": "https://github.com/Proberen/typepro-plugins/releases/download/plugin-8af8a5d80555efb02e22075fe6dc57977444899f54ced424db4a2e9a55c03b15/notebook.date-and-count.zip",
+      "sha256": "79b31395ec0ef7642775244ddf2f32236c66e22ac91e36540b6b6650f3bbb0e2",
+      "size": 1286
+    }
+  ]
+}
