@@ -1,5 +1,11 @@
 # TypePro 插件市场
 
+## AI 笔记侧栏 1.2.0
+
+AI 1.2.0 源码优先注册通用 `editor.sidebar`。TypePro 1.7.0 中，侧栏入口由宿主编辑工具栏生成，不再提供独立会话页和首页 AI 入口。模型、会话、历史、提示词、Skill、笔记工具和同步数据均保留在插件内。插件设置页仍可从插件管理打开。
+
+旧 TypePro 1.6.0 不支持该槽位时，AI 插件回退到独立页面和原有打开命令；升级宿主后重新初始化即可自动采用侧栏。兼容判断全部在插件内，API 3、同步格式、权限和网络来源不变，无需新增市场目录。此处为发布源码，实际发布状态以 GitHub Actions 和 `catalog-v3.json` 回执为准；不可重发 AI 1.1.1 的原版本。
+
 公开插件源码、通用 SDK 和独立发布流程。TypePro 1.6.0 提供 API 3 通用宿主，此后已有接口范围内的插件业务和界面可独立发布，无需升级 App；新增宿主能力或不兼容接口才需要升级 App。每日打卡 1.1.0 和 AI 助手 1.1.1 已发布，并通过原生市场模块的真实下载校验。AI 1.1.1 仅修复插件样式导入顺序造成的桌面按钮显示问题，App 1.6.0 DMG／APK 保持不变。
 
 ## 仓库结构
@@ -20,11 +26,11 @@ API 1 的简单插件仍可直接维护 manifest.json 和 main.js。API 3 源码
 | --- | --- | --- |
 | 日期与字数 | plugins/notebook.date-and-count/main.js | API 1 |
 | 每日打卡 1.1.0 | plugins/notebook.daily-checkin/source | API 3 |
-| AI 助手 1.1.1 | plugins/notebook.ai-assistant/source | API 3 |
+| AI 助手 1.2.0 | plugins/notebook.ai-assistant/source | API 3；侧栏需 TypePro 1.7.0，1.6.0 回退页面 |
 
 ## 通用能力
 
-宿主接口覆盖笔记、编辑器、文档事件、按插件隔离的同步 JSON、HTTPS/流式传输、设备凭据、文件选择/导出、可信确认与差异审阅。界面挂载点为首页组件、独立页面和插件设置；命令可出现在应用菜单及首页/编辑器工具区。插件不能访问父窗口、Tauri、任意本地路径或外部进程；联网通过声明及用户批准的精确 HTTPS 来源进行。
+宿主接口覆盖笔记、编辑器、文档事件、按插件隔离的同步 JSON、HTTPS/流式传输、设备凭据、文件选择/导出、可信确认与差异审阅。界面挂载点为首页组件、独立页面、插件设置及 TypePro 1.7.0 新增的正文侧栏；命令可出现在应用菜单及首页/编辑器工具区。插件不能访问父窗口、Tauri、任意本地路径或外部进程；联网通过声明及用户批准的精确 HTTPS 来源进行。
 
 规范权威入口是 TypePro 源码 docs/PLUGIN-SPEC.md；类型见 sdk/typepro.d.ts。打卡算法、热力图、模型协议、SSE、会话、Skill 和工具调用均不在 App 中。
 
@@ -43,7 +49,7 @@ API 1 的简单插件仍可直接维护 manifest.json 和 main.js。API 3 源码
 - 新权限和新来源需要用户确认。插件更新由用户手动发起，网络失败保留旧插件。
 - 进入市场立即检查、可手动刷新，页面前台每分钟检查。实际到达时间取决于网络和 GitHub 缓存。
 
-本轮独立插件测试 17 项通过（打卡 7、AI 数据／Skill／工具 7、SSE 3），分发检查 35 项通过。宿主类型检查、Rust 41 项、SDK 8 项及独立 WKWebView CSP 9 项检查由 App 交付记录维护；WebView 检查不是打包 App UI 验收。
+此前 1.1.x 交付的独立插件测试 17 项通过（打卡 7、AI 数据／Skill／工具 7、SSE 3），分发检查 35 项通过。宿主类型检查、Rust 41 项、SDK 8 项及独立 WKWebView CSP 9 项检查由 App 交付记录维护；这些历史结果不代替本次 1.2.0 验收。
 
 [Publish plugins #7](https://github.com/Proberen/typepro-plugins/actions/runs/39759657722) 在源提交 `218ec1d6cc2a3ae573de860e0d83cc645d73e588` 上成功。首次发布的 `catalog-v3.json` 更新时间为 `2026-10-22T09:59:40Z`；实际 App 原生市场模块读取目录、下载全部三个包并校验大小／SHA-256，ZIP CRC 和 Manifest／JS／CSS 资源结构核对通过，未执行下载的插件代码。API 1／2 旧目录条目与冻结基线完全一致。
 
@@ -54,6 +60,6 @@ API 1 的简单插件仍可直接维护 manifest.json 和 main.js。API 3 源码
 | AI 助手 | 1.1.1 | 300248 | `f9c3ffc4e2614ee17b585eb4aebc9f0bdeb164b4d4fdbfa720466bc0b7b89599` |
 | 每日打卡 | 1.1.0 | 237939 | `644ca726105fb7fa779175c0a5ab0fec305a00afc95f345a7dc59ae5aaf186e0` |
 
-当前发布版本的视图资源在独立 WKWebView 与模拟 RPC 中完成 61 项检查：每日打卡 1.1.0 共 13 项，AI 助手 1.1.1 桌面 15 项、设置 16 项、窄屏 17 项。窄屏历史栏 fixture 以 `transition: none` 模拟 reduced-motion，默认动画时序未验证。
+此前发布的视图资源在独立 WKWebView 与模拟 RPC 中完成 61 项检查：每日打卡 1.1.0 共 13 项，AI 助手 1.1.1 桌面 15 项、设置 16 项、窄屏 17 项。窄屏历史栏 fixture 以 `transition: none` 模拟 reduced-motion，默认动画时序未验证。
 
 本轮未验收打包 App UI、物理手机、真实模型服务或两台设备联网同步恢复。插件发布和下载校验不代替这些端到端验收。

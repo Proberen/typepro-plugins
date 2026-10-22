@@ -23,6 +23,12 @@ export default function Modal({
     <dialog
       className={`modal ${wide ? "modal-wide" : ""}`}
       ref={ref}
+      onKeyDown={(event) => {
+        if (event.key !== "Escape" || event.nativeEvent.isComposing) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onClose();
+      }}
       onCancel={(event) => {
         event.preventDefault();
         onClose();

@@ -6,7 +6,7 @@
  */
 export type JsonValue = null | boolean | number | string | JsonValue[] | {[key: string]: JsonValue};
 export type PluginPermission = "notes.read" | "notes.write" | "editor.read" | "editor.insert" | "commands" | "panels" | "ui" | "storage" | "network" | "secrets" | "files.pick" | "files.export";
-export type PluginSlot = "home.widget" | "app.page" | "plugin.settings";
+export type PluginSlot = "home.widget" | "app.page" | "plugin.settings" | "editor.sidebar";
 export type CommandLocation = "app.menu" | "home.toolbar" | "editor.toolbar";
 export type PluginErrorCode = "PERMISSION_DENIED" | "INVALID_ARGUMENT" | "NOT_FOUND" | "CONFLICT" | "CANCELLED" | "LIMIT_EXCEEDED" | "UNSUPPORTED_API" | "NETWORK_ERROR" | "INTERNAL_ERROR";
 export interface PluginApiError extends Error { code: PluginErrorCode }
@@ -61,11 +61,13 @@ export interface PluginEventMap {
   "storage.changed": {keys: string[] | null};
   "sync.completed": {timestamp: string};
   "theme.changed": Theme;
+  /** Own view visibility combined with host foreground state; Worker receives foreground state only. */
   "view.visibility": {visible: boolean};
 }
 export interface CallControl {signal?: AbortSignal}
 export interface ViewRegistration {
   id: string;
+  /** editor.sidebar requires TypePro 1.7.0+. Its toolbar entry is host-owned; older API 3 hosts may use a plugin-owned app.page fallback. */
   slot: PluginSlot;
   title: string;
   script: string;
@@ -125,7 +127,9 @@ export interface TypeProSDK {
   };
   readonly ui: {
     register(options: ViewRegistration): Promise<void>;
+    /** Opens pages/settings, or idempotently opens a sidebar in the active editor. */
     open(id: string): Promise<void>;
+    /** Closes only the calling view; sidebar content may remain mounted while hidden. */
     close(): Promise<void>;
     resize(height: number): Promise<void>;
     openExternal(url: string): Promise<void>;

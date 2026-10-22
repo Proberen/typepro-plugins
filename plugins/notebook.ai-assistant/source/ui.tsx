@@ -32,7 +32,7 @@ function Page() {
   }, []);
   if (error) return <p className="plugin-error" role="alert">{error}</p>;
   if (!adapter) return <p className="plugin-loading">正在加载…</p>;
-  return <AssistantPage pluginId={notebook.context.pluginId} title="AI 助手" adapter={adapter} initiallyOpenSettings={notebook.context.slot === "plugin.settings"} onBack={() => void notebook.ui.close()} onOpenDocument={id => void notebook.notes.open(id).catch(cause => setError(cause instanceof Error ? cause.message : String(cause)))} />;
+  return <AssistantPage pluginId={notebook.context.pluginId} title="AI 助手" adapter={adapter} settingsOnly={notebook.context.slot === "plugin.settings"} onOpenDocument={id => void notebook.notes.open(id).catch(cause => setError(cause instanceof Error ? cause.message : String(cause)))} />;
 }
 
 createRoot(document.getElementById("root")!).render(<Page />);
