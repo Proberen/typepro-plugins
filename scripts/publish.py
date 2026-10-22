@@ -1,9 +1,10 @@
-"""Run on GitHub Actions: publish verified packages, then commit both catalogs."""
+"""Run on GitHub Actions: publish verified packages, then commit versioned catalogs."""
 
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
 import hashlib
+import ipaddress
 import json
 import os
 import re
@@ -11,12 +12,15 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+from urllib.parse import urlsplit
 
 REPOSITORY = "Proberen/typepro-plugins"
-MAX_PACKAGE = 2 * 1024 * 1024
+MAX_PACKAGE = 8 * 1024 * 1024
+MAX_RESOURCE = 4 * 1024 * 1024
 MAX_CATALOG = 1024 * 1024
 LEGACY_PERMISSIONS = {"commands", "panels", "editor.insert", "notes.read", "notes.write"}
-PERMISSIONS = LEGACY_PERMISSIONS | {"storage", "home.activity", "assistant"}
+API2_PERMISSIONS = LEGACY_PERMISSIONS | {"storage", "home.activity", "assistant"}
+PERMISSIONS = LEGACY_PERMISSIONS | {"storage", "editor.read", "ui", "network", "secrets", "files.pick", "files.export"}
 ID = re.compile(r"[a-z][a-z0-9._-]{2,63}\Z", re.ASCII)
 VERSION = re.compile(r"\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?\Z", re.ASCII)
 JS_WHITESPACE = "\t\n\v\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
@@ -55,13 +59,13 @@ def validate_manifest(raw, code):
     if not valid_version(version):
         raise ValueError("插件版本格式不正确")
     api_version = manifest.get("apiVersion")
-    if isinstance(api_version, bool) or not isinstance(api_version, (int, float)) or api_version not in (1, 2):
-        raise ValueError("只支持 apiVersion: 1 或 2")
+    if isinstance(api_version, bool) or not isinstance(api_version, (int, float)) or api_version not in (1, 2, 3):
+        raise ValueError("只支持 apiVersion: 1、2 或 3")
     if "description" in manifest and (
         not isinstance(manifest["description"], str) or utf16_length(manifest["description"]) > 300
     ):
         raise ValueError("插件说明最多 300 个字符")
-    allowed = LEGACY_PERMISSIONS if api_version == 1 else PERMISSIONS
+    allowed = LEGACY_PERMISSIONS if api_version == 1 else API2_PERMISSIONS if api_version == 2 else PERMISSIONS
     if not isinstance(permissions, list) or any(
         not isinstance(permission, str) or permission not in allowed for permission in permissions
     ):
@@ -77,7 +81,45 @@ def validate_manifest(raw, code):
     }
     if manifest.get("description"):
         normalized["description"] = manifest["description"]
+    if "networkOrigins" in manifest:
+        if api_version != 3 or "network" not in permissions:
+            raise ValueError("网络来源需要 API 3 和 network 权限")
+        origins = manifest["networkOrigins"]
+        if not isinstance(origins, list) or len(origins) > 32:
+            raise ValueError("网络来源最多 32 项")
+        normalized["networkOrigins"] = sorted(set(normalize_origin(value) for value in origins))
     return normalized
+
+
+def normalize_origin(value):
+    if not isinstance(value, str) or len(value) > 2048 or any(c in value for c in ("\\", "*", "%")) or any(ord(c) <= 32 or ord(c) == 127 for c in value) or not value.isascii():
+        raise ValueError("网络来源必须为 ASCII HTTPS 来源")
+    try:
+        url = urlsplit(value)
+        host = url.hostname
+        port = url.port
+    except ValueError as error:
+        raise ValueError("网络来源无效") from error
+    if not host or url.scheme != "https" or url.username or url.password or url.query or url.fragment or url.path not in ("", "/"):
+        raise ValueError("网络来源只能包含协议、主机和端口")
+    try:
+        if ":" in host:
+            host = f"[{ipaddress.IPv6Address(host).compressed}]"
+        elif re.fullmatch(r"(?:[0-9]+|0x[0-9a-f]+)", host.rstrip(".").split(".")[-1]):
+            host = str(ipaddress.IPv4Address(host))
+        elif not re.fullmatch(r"[a-z0-9._-]+", host):
+            raise ValueError("主机格式无效")
+    except ValueError as error:
+        raise ValueError("网络来源主机必须使用规范写法") from error
+    origin = f"https://{host}" + (f":{port}" if port is not None and port != 443 else "")
+    if value not in (origin, origin + "/"):
+        raise ValueError("网络来源必须使用规范 HTTPS 来源")
+    return origin
+
+
+def valid_resource_path(name):
+    return len(name) <= 200 and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]*\.(?:js|css|json|txt|md|svg)", name) and all(
+        part and part not in (".", "..", "__proto__", "prototype", "constructor") for part in name.split("/"))
 
 
 def package_plugin(directory):
@@ -95,6 +137,23 @@ def package_plugin(directory):
     manifest = validate_manifest(files["manifest.json"], files["main.js"])
     if directory.name != manifest["id"]:
         raise ValueError(f"目录名必须与插件 id 一致：{directory.name}")
+    resources = directory / "files"
+    if resources.exists():
+        if resources.is_symlink() or not resources.is_dir() or manifest["apiVersion"] != 3:
+            raise ValueError("files 资源需要 API 3 和普通目录")
+        for path in sorted(resources.rglob("*")):
+            if path.is_symlink():
+                raise ValueError("资源不允许符号链接")
+            if path.is_dir():
+                continue
+            name = path.relative_to(resources).as_posix()
+            if not path.is_file() or not valid_resource_path(name) or path.stat().st_size > MAX_RESOURCE:
+                raise ValueError(f"资源路径、类型或大小无效：{name}")
+            data = path.read_bytes()
+            data.decode("utf-8")
+            files["files/" + name] = data
+    if len(files) > 128:
+        raise ValueError("插件包最多 128 个文件")
     output = BytesIO()
     # Stored entries keep bytes reproducible across runner Python/zlib upgrades.
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_STORED) as archive:
@@ -106,7 +165,7 @@ def package_plugin(directory):
             archive.writestr(info, data)
     package = output.getvalue()
     if len(package) > MAX_PACKAGE or sum(map(len, files.values())) > MAX_PACKAGE:
-        raise ValueError(f"插件包超过 2 MiB：{directory.name}")
+        raise ValueError(f"插件包超过 8 MiB：{directory.name}")
     identity = f'{manifest["id"]}@{manifest["version"]}'
     tag = "plugin-" + hashlib.sha256(identity.encode("utf-8")).hexdigest()
     entry = {
@@ -173,19 +232,27 @@ def collect_plugins(root, previous):
 
 
 def read_previous(root):
-    path = root / "catalog-v2.json"
-    if not path.exists():
-        path = root / "catalog.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    for name in ("catalog-v3.json", "catalog-v2.json", "catalog.json"):
+        path = root / name
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
+    raise ValueError("缺少市场清单")
 
 
-def catalogs(entries, updated_at):
-    """The 1.4 client must never receive an API 2 entry or its permissions."""
-    return {
-        "catalog.json": {"schemaVersion": 1, "updatedAt": updated_at,
-                         "plugins": [entry for entry in entries if entry["apiVersion"] == 1]},
-        "catalog-v2.json": {"schemaVersion": 1, "updatedAt": updated_at, "plugins": entries},
-    }
+def catalogs(entries, updated_at, previous_views=None):
+    """Keep the last compatible release for an ID that moved to a newer API."""
+    previous_views = previous_views or {}
+    views = {}
+    for name, api in (("catalog.json", 1), ("catalog-v2.json", 2), ("catalog-v3.json", 3)):
+        old = {entry["id"]: entry for entry in previous_views.get(name, {}).get("plugins", [])}
+        compatible = []
+        for entry in entries:
+            if entry["apiVersion"] <= api:
+                compatible.append(entry)
+            elif entry["id"] in old and old[entry["id"]]["apiVersion"] <= api:
+                compatible.append(old[entry["id"]])
+        views[name] = {"schemaVersion": 1, "updatedAt": updated_at, "plugins": compatible}
+    return views
 
 
 def run(*args, check=True):
@@ -235,7 +302,9 @@ def main():
     packages = collect_plugins(root, previous)
     entries = [entry for entry, _, _ in packages]
     updated_at = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
-    views = catalogs(entries, updated_at)
+    previous_views = {name: json.loads((root / name).read_text(encoding="utf-8"))
+                      for name in ("catalog.json", "catalog-v2.json", "catalog-v3.json") if (root / name).exists()}
+    views = catalogs(entries, updated_at, previous_views)
     encoded = {name: (json.dumps(catalog, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
                for name, catalog in views.items()}
     if any(len(raw) > MAX_CATALOG for raw in encoded.values()):
@@ -256,7 +325,7 @@ def main():
         (root / name).write_bytes(raw)
     run("git", "config", "user.name", "github-actions[bot]")
     run("git", "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com")
-    run("git", "add", "catalog.json", "catalog-v2.json")
+    run("git", "add", "catalog.json", "catalog-v2.json", "catalog-v3.json")
     run("git", "commit", "-m", "Update plugin catalogs [skip ci]")
     run("git", "push", "origin", "HEAD:main")
     print("市场清单已发布")
