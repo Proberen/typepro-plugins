@@ -1,4 +1,4 @@
-"""Run on GitHub Actions: publish verified packages, then commit one catalog."""
+"""Run on GitHub Actions: publish verified packages, then commit both catalogs."""
 
 from datetime import datetime, timezone
 from io import BytesIO
@@ -15,7 +15,8 @@ import zipfile
 REPOSITORY = "Proberen/typepro-plugins"
 MAX_PACKAGE = 2 * 1024 * 1024
 MAX_CATALOG = 1024 * 1024
-PERMISSIONS = {"commands", "panels", "editor.insert", "notes.read", "notes.write"}
+LEGACY_PERMISSIONS = {"commands", "panels", "editor.insert", "notes.read", "notes.write"}
+PERMISSIONS = LEGACY_PERMISSIONS | {"storage", "home.activity", "assistant"}
 ID = re.compile(r"[a-z][a-z0-9._-]{2,63}\Z", re.ASCII)
 VERSION = re.compile(r"\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?\Z", re.ASCII)
 JS_WHITESPACE = "\t\n\v\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
@@ -54,14 +55,15 @@ def validate_manifest(raw, code):
     if not valid_version(version):
         raise ValueError("插件版本格式不正确")
     api_version = manifest.get("apiVersion")
-    if isinstance(api_version, bool) or not isinstance(api_version, (int, float)) or api_version != 1:
-        raise ValueError("只支持 apiVersion: 1")
+    if isinstance(api_version, bool) or not isinstance(api_version, (int, float)) or api_version not in (1, 2):
+        raise ValueError("只支持 apiVersion: 1 或 2")
     if "description" in manifest and (
         not isinstance(manifest["description"], str) or utf16_length(manifest["description"]) > 300
     ):
         raise ValueError("插件说明最多 300 个字符")
+    allowed = LEGACY_PERMISSIONS if api_version == 1 else PERMISSIONS
     if not isinstance(permissions, list) or any(
-        not isinstance(permission, str) or permission not in PERMISSIONS for permission in permissions
+        not isinstance(permission, str) or permission not in allowed for permission in permissions
     ):
         raise ValueError("插件权限不受支持")
     if not script.strip(JS_WHITESPACE):
@@ -70,7 +72,7 @@ def validate_manifest(raw, code):
         "id": identifier,
         "name": name.strip(JS_WHITESPACE),
         "version": version,
-        "apiVersion": 1,
+        "apiVersion": int(api_version),
         "permissions": list(dict.fromkeys(permissions)),
     }
     if manifest.get("description"):
@@ -170,6 +172,22 @@ def collect_plugins(root, previous):
     return packages
 
 
+def read_previous(root):
+    path = root / "catalog-v2.json"
+    if not path.exists():
+        path = root / "catalog.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def catalogs(entries, updated_at):
+    """The 1.4 client must never receive an API 2 entry or its permissions."""
+    return {
+        "catalog.json": {"schemaVersion": 1, "updatedAt": updated_at,
+                         "plugins": [entry for entry in entries if entry["apiVersion"] == 1]},
+        "catalog-v2.json": {"schemaVersion": 1, "updatedAt": updated_at, "plugins": entries},
+    }
+
+
 def run(*args, check=True):
     return subprocess.run(list(map(str, args)), check=check, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
@@ -213,27 +231,33 @@ def main():
         raise ValueError("发布只能在 Proberen/typepro-plugins 的 main 分支运行")
     root = Path(__file__).resolve().parents[1]
     os.chdir(root)
-    previous = json.loads((root / "catalog.json").read_text(encoding="utf-8"))
+    previous = read_previous(root)
     packages = collect_plugins(root, previous)
     entries = [entry for entry, _, _ in packages]
-    catalog = {"schemaVersion": 1, "updatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"), "plugins": entries}
-    raw_catalog = (json.dumps(catalog, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
-    if len(raw_catalog) > MAX_CATALOG:
+    updated_at = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    views = catalogs(entries, updated_at)
+    encoded = {name: (json.dumps(catalog, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+               for name, catalog in views.items()}
+    if any(len(raw) > MAX_CATALOG for raw in encoded.values()):
         raise ValueError("市场清单超过 1 MiB")
+    changed = any(not (root / name).exists() or
+                  json.loads((root / name).read_text(encoding="utf-8")).get("plugins") != catalog["plugins"]
+                  for name, catalog in views.items())
     output = root / ".publish"
     output.mkdir(exist_ok=True)
     previous_by_id = {entry["id"]: entry for entry in previous["plugins"]}
     for entry, tag, package in packages:
         if previous_by_id.get(entry["id"]) != entry:
             publish_package(entry, tag, package, output)
-    if previous["plugins"] == entries:
+    if not changed:
         print("市场清单无变化")
         return
-    (root / "catalog.json").write_bytes(raw_catalog)
+    for name, raw in encoded.items():
+        (root / name).write_bytes(raw)
     run("git", "config", "user.name", "github-actions[bot]")
     run("git", "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com")
-    run("git", "add", "catalog.json")
-    run("git", "commit", "-m", "Update plugin catalog [skip ci]")
+    run("git", "add", "catalog.json", "catalog-v2.json")
+    run("git", "commit", "-m", "Update plugin catalogs [skip ci]")
     run("git", "push", "origin", "HEAD:main")
     print("市场清单已发布")
 
