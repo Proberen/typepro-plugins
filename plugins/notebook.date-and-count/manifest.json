@@ -1,0 +1,8 @@
+{
+  "id": "notebook.date-and-count",
+  "name": "日期与字数",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "插入日期，查看当前文档字数。",
+  "permissions": ["commands", "editor.insert", "notes.read", "panels"]
+}
