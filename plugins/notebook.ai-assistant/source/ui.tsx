@@ -1,10 +1,10 @@
+import "./base.css";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import AssistantPage from "./AssistantPage";
 import { notebook } from "./sdk";
 import type { JsonValue } from "../../../sdk/typepro";
 import type { AssistantAdapter } from "./types";
-import "./base.css";
 
 function Page() {
   const [adapter, setAdapter] = useState<AssistantAdapter | null>(null);
