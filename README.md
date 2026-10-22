@@ -1,6 +1,6 @@
 # TypePro 插件市场
 
-公开插件源码、通用 SDK 和独立发布流程。App 是通用宿主，插件自行实现业务及界面；日常修改插件无需修改 App。当前 API 3 改造为源码状态，未发布新安装包。
+公开插件源码、通用 SDK 和独立发布流程。App 是通用宿主，插件自行实现业务及界面。TypePro 1.6.0 是一次 API 3 宿主升级，此后已有接口范围内的插件业务和界面可独立发布，无需升级 App；新增宿主能力或不兼容接口才需要升级 App。TypePro 1.6.0 DMG／APK 已生成；每日打卡和 AI 助手 1.1.0 已由 [Publish plugins #7](https://github.com/Proberen/typepro-plugins/actions/runs/39759657722) 发布，市场目录及全部三个包的真实下载校验通过。
 
 ## 仓库结构
 
@@ -32,7 +32,7 @@ API 1 的简单插件仍可直接维护 manifest.json 和 main.js。API 3 源码
 
 普通业务数据使用 notebook.storage，以插件 ID 隔离，随用户的私有笔记仓库同步。安装清单、版本和本地导入包的 JS/CSS 资源同样同步。同步到新设备后需要单独授权；启用状态和权限不跨设备复制。
 
-密钥由 notebook.secrets.configure 打开宿主输入框，Keychain/Keystore 本机保存；插件不接收明文，只能在获准来源的网络请求中引用凭据。API 2 旧 AI 密钥需要重新配置一次；原插件 ID 和普通业务数据键不变。
+密钥由 notebook.secrets.configure 打开宿主输入框，Keychain/Keystore 本机保存；插件不接收明文，只能在获准来源的网络请求中引用凭据。API Key 每台设备单独配置，不进入 GitHub。API 2 旧 AI 密钥需要在各设备重新配置一次；原插件 ID 和普通业务数据键不变。跨设备同步 API 3 插件前，Mac 与 Android 均应升级到 1.6.0。
 
 ## 发布与兼容
 
@@ -43,4 +43,13 @@ API 1 的简单插件仍可直接维护 manifest.json 和 main.js。API 3 源码
 - 新权限和新来源需要用户确认。插件更新由用户手动发起，网络失败保留旧插件。
 - 进入市场立即检查、可手动刷新，页面前台每分钟检查。实际到达时间取决于网络和 GitHub 缓存。
 
-本轮没有运行本地构建、测试或远程发布。工作流、测试源码和类型定义已随源码调整；后续发布需要真实工作流回执才能确认产物可用。
+本轮独立插件测试 17 项通过（打卡 7、AI 数据／Skill／工具 7、SSE 3），分发检查 35 项通过。宿主类型检查、Rust 41 项、SDK 8 项及独立 WKWebView CSP 9 项检查由 App 交付记录维护；WebView 检查不是打包 App UI 验收。
+
+[Publish plugins #7](https://github.com/Proberen/typepro-plugins/actions/runs/39759657722) 在源提交 `218ec1d6cc2a3ae573de860e0d83cc645d73e588` 上成功。`catalog-v3.json` 更新时间为 `2026-10-22T09:59:40Z`；实际 App 原生市场模块读取目录、下载全部三个包并校验大小／SHA-256，ZIP CRC 和 Manifest／JS／CSS 资源结构核对通过，未执行下载的插件代码。API 1／2 旧目录条目与冻结基线完全一致。
+
+| 插件 | 版本 | 字节数 | SHA-256 |
+| --- | --- | ---: | --- |
+| AI 助手 | 1.1.0 | 300248 | `9dbc4c7cad61e134fc16606c06f34d255c96cb9ae9781d04a3499de5485d5313` |
+| 每日打卡 | 1.1.0 | 237939 | `644ca726105fb7fa779175c0a5ab0fec305a00afc95f345a7dc59ae5aaf186e0` |
+
+本轮未验收打包 App UI、物理手机、真实模型服务或两台设备联网同步恢复。插件发布和下载校验不代替这些端到端验收。
