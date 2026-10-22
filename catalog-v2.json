@@ -1,7 +1,21 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-22T06:43:39Z",
+  "updatedAt": "2026-10-22T08:18:22Z",
   "plugins": [
+    {
+      "id": "notebook.daily-checkin",
+      "name": "每日打卡",
+      "version": "1.0.0",
+      "apiVersion": 2,
+      "permissions": [
+        "storage",
+        "home.activity"
+      ],
+      "description": "自动记录人工编辑的新增与删除字数，在首页以贡献热力图展示，并通过私有笔记仓库同步。需要 TypePro 1.5.0。",
+      "downloadUrl": "https://github.com/Proberen/typepro-plugins/releases/download/plugin-f426a86ddbe28e9a8d12f58894a79bcfb282eb682cf8cb37b5f218da1b862eeb/notebook.daily-checkin.zip",
+      "sha256": "59a0f6df70c6a030b34ad701e5e070e0fa718d5789d9581ee26d2d339d4578d9",
+      "size": 769
+    },
     {
       "id": "notebook.date-and-count",
       "name": "日期与字数",
