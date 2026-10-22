@@ -1,8 +1,12 @@
 {
   "id": "notebook.daily-checkin",
   "name": "每日打卡",
-  "version": "1.0.0",
-  "apiVersion": 2,
-  "description": "自动记录人工编辑的新增与删除字数，在首页以贡献热力图展示，并通过私有笔记仓库同步。需要 TypePro 1.5.0。",
-  "permissions": ["storage", "home.activity"]
+  "version": "1.1.0",
+  "apiVersion": 3,
+  "description": "自动记录人工编辑的新增与删除字数，在首页以贡献热力图展示，并通过私有笔记仓库同步。基于通用 Plugin API 3，业务和界面随插件更新。",
+  "permissions": [
+    "ui",
+    "storage",
+    "notes.read"
+  ]
 }
