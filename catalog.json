@@ -1,5 +1,22 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-22T00:00:00Z",
-  "plugins": []
+  "updatedAt": "2026-10-22T06:43:39Z",
+  "plugins": [
+    {
+      "id": "notebook.date-and-count",
+      "name": "日期与字数",
+      "version": "1.0.0",
+      "apiVersion": 1,
+      "permissions": [
+        "commands",
+        "editor.insert",
+        "notes.read",
+        "panels"
+      ],
+      "description": "插入日期，查看当前文档字数。",
+      "downloadUrl": "https://github.com/Proberen/typepro-plugins/releases/download/plugin-8af8a5d80555efb02e22075fe6dc57977444899f54ced424db4a2e9a55c03b15/notebook.date-and-count.zip",
+      "sha256": "79b31395ec0ef7642775244ddf2f32236c66e22ac91e36540b6b6650f3bbb0e2",
+      "size": 1286
+    }
+  ]
 }
